@@ -1,0 +1,134 @@
+{
+  "modules": [
+    {
+      "name": "IoTHub",
+      "loader": {
+        "name": "native",
+        "entrypoint": {
+          "module.path": "../../modules/iothub/libiothub.so"
+        }
+      },
+      "args": {
+        "IoTHubName": "YOUR IOT HUB NAME",
+        "IoTHubSuffix": "YOUR IOT HUB SUFFIX",
+        "Transport": "TRANSPORT PROTOCOL"
+      }
+    },
+    {
+      "name": "mapping",
+      "loader": {
+        "name": "native",
+        "entrypoint": {
+          "module.path": "../../modules/identitymap/libidentity_map.so"
+        }
+      },
+      "args": [
+        {
+          "macAddress": "02:02:02:02:02:02",
+          "deviceId": "YOUR DEVICE ID",
+          "deviceKey": "YOUR DEVICE KEY"
+        }
+      ]
+    },
+    {
+      "name": "sqlite",
+      "loader": {
+        "name": "native",
+        "entrypoint": {
+          "module.path": "../../modules/sqlite/libsqlite.so"
+        }
+      },
+      "args": {
+        "macAddress": "02:02:02:02:02:02",
+        "sources": [
+          {
+            "id": "modbus",
+            "dbPath": "./test.db",
+            "table": "MODBUS",
+            "limit": "10",
+            "columns": [
+              {
+                "name": "DATETIME",
+                "type": "CHAR(19)",
+                "primaryKey": "1",
+                "notNull": "1"
+              },
+              {
+                "name": "MAC",
+                "type": "CHAR(17)",
+                "primaryKey": "1",
+                "notNull": "1"
+              },
+              {
+                "name": "VALUE",
+                "type": "INT",
+                "primaryKey": "0",
+                "notNull": "1"
+              },
+              {
+                "name": "ADDRESS",
+                "type": "INT",
+                "primaryKey": "1",
+                "notNull": "1"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "modbus_read",
+      "loader": {
+        "name": "native",
+        "entrypoint": {
+          "module.path": "../../modules/modbus_read/libmodbus_read.so"
+        }
+      },
+      "args": [
+        {
+          "serverConnectionString": "127.0.0.1",
+          "interval": "2000",
+          "macAddress": "01:01:01:01:01:01",
+          "deviceType": "powerMeter",
+          "sqliteEnabled": "1",
+          "operations": [
+            {
+              "unitId": "1",
+              "functionCode": "3",
+              "startingAddress": "1",
+              "length": "1"
+            },
+            {
+              "unitId": "1",
+              "functionCode": "3",
+              "startingAddress": "2",
+              "length": "1"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "source": "sqlite",
+      "sink": "mapping"
+    },
+    {
+      "source": "IoTHub",
+      "sink": "mapping"
+    },
+    {
+      "source": "mapping",
+      "sink": "sqlite"
+    },
+    {
+      "source": "mapping",
+      "sink": "IoTHub"
+    },
+    {
+      "source": "modbus_read",
+      "sink": "sqlite"
+    }
+  ]
+}
