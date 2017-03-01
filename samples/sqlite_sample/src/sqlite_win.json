@@ -5,7 +5,7 @@
       "loader": {
         "name": "native",
         "entrypoint": {
-          "module.path": "D:\\code\\azure-iot-gateway-sdk_1216\\build\\modules\\iothub\\Debug\\iothub.dll"
+          "module.path": "..\\..\\..\\modules\\iothub\\Debug\\iothub.dll"
         }
       },
       "args": {
@@ -19,7 +19,7 @@
       "loader": {
         "name": "native",
         "entrypoint": {
-          "module.path": "D:\\code\\azure-iot-gateway-sdk_1216\\build\\modules\\identitymap\\Debug\\identity_map.dll"
+          "module.path": "..\\..\\..\\modules\\identitymap\\Debug\\identity_map.dll"
         }
       },
       "args": [
@@ -35,7 +35,7 @@
       "loader": {
         "name": "native",
         "entrypoint": {
-          "module.path": "D:\\code\\azure-iot-gateway-sdk_0113\\build\\modules\\sqlite\\Debug\\sqlite.dll"
+          "module.path": "..\\..\\..\\modules\\sqlite\\Debug\\sqlite.dll"
         }
       },
       "args": {
@@ -81,7 +81,7 @@
       "loader": {
         "name": "native",
         "entrypoint": {
-          "module.path": "D:\\code\\azure-iot-gateway-sdk_0113\\build\\modules\\modbus_read\\Debug\\modbus_read.dll"
+          "module.path": "..\\..\\..\\modules\\modbus_read\\Debug\\modbus_read.dll"
         }
       },
       "args": [

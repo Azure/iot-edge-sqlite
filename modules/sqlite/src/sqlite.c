@@ -362,13 +362,13 @@ static void sqlite_try_update_trigger(SQLITE_HANDLE_DATA * handleData, SQLITE_SO
     }
     sql_primary[strlen(sql_primary)-1] = '\0'; // remove last comma
 
-    SNPRINTF_S(sql_drop_trigger, BUFSIZE - 1, "DROP TRIGGER %s_size_control;", src_table->table);
-    SNPRINTF_S(sql_trigger, BUFSIZE - 1, "CREATE TRIGGER %s_size_control INSERT ON %s WHEN (select count(*) from %s)>%d\n"
-        "BEGIN\n"
-        "DELETE FROM %s WHERE (%s) IN (SELECT %s FROM %s ORDER BY DATETIME limit (select count(*) - %d from %s));\n"
-        "END;",
+	SNPRINTF_S(sql_drop_trigger, BUFSIZE - 1, "DROP TRIGGER %s_size_control;", src_table->table);
+	SNPRINTF_S(sql_trigger, BUFSIZE - 1, "CREATE TRIGGER %s_size_control INSERT ON %s WHEN (SELECT count(*) from %s)>%d\n"
+		"BEGIN\n"
+		"DELETE FROM %s WHERE rowid <= (SELECT max(rowid) - %d FROM %s);\n"
+		"END;",
         src_table->table, src_table->table, src_table->table, src_table->limit,
-        src_table->table, sql_primary, sql_primary, src_table->table, src_table->limit, src_table->table
+        src_table->table, src_table->limit, src_table->table
         );
     sqlite_exec(handleData, sql_drop_trigger, 0);
     sqlite_exec(handleData, sql_trigger, 0);
