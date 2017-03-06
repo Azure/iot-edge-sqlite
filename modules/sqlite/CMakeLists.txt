@@ -23,10 +23,10 @@ if(SQLITE3_LIB)
 
     add_library(sqlite3 SHARED IMPORTED)
 if(WIN32)
-    set_target_properties(sqlite3 PROPERTIES IMPORTED_LOCATION ${SQLITE3_LIB})
-else(WIN32)
     set_target_properties(sqlite3 PROPERTIES IMPORTED_LOCATION ${SQLITE3_DLL})
     set_target_properties(sqlite3 PROPERTIES IMPORTED_IMPLIB ${SQLITE3_LIB})
+else(WIN32)
+    set_target_properties(sqlite3 PROPERTIES IMPORTED_LOCATION ${SQLITE3_LIB})
 endif(WIN32)
 
 endif(SQLITE3_LIB)
