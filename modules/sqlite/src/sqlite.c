@@ -105,16 +105,21 @@ static void sqlite_source_cleanup(SQLITE_SOURCE * source)
         {
             SQLITE_COLUMN * temp_column = column;
             column = column->p_next;
-            free((void*)temp_column->name);
-            free((void*)temp_column->type);
+			if (temp_column->name)
+                free((void*)temp_column->name);
+			if (temp_column->type)
+                free((void*)temp_column->type);
             free(temp_column);
         }
 
         SQLITE_SOURCE * temp_source = source;
         source = source->p_next;
-        free((void*)temp_source->id);
-        free((void*)temp_source->dbPath);
-        free((void*)temp_source->table);
+		if (temp_source->id)
+            free((void*)temp_source->id);
+		if (temp_source->dbPath)
+            free((void*)temp_source->dbPath);
+		if (temp_source->table)
+            free((void*)temp_source->table);
         free(temp_source);
     }
 }
@@ -538,7 +543,8 @@ static void Sqlite_Destroy(MODULE_HANDLE module)
         if (handleData->mac_address != NULL)
             free((char*)handleData->mac_address);
         sqlite_source_cleanup(handleData->sources);
-        Map_Destroy(propertiesMap);
+		if (propertiesMap)
+			Map_Destroy(propertiesMap);
         free(handleData);
     }
 }

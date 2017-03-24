@@ -44,6 +44,9 @@ linkSharedUtil(sqlite)
 linkSharedUtil(sqlite_static)
 
 add_module_to_solution(sqlite)
+if(${run_unittests})
+	add_subdirectory(tests)
+endif()
 
 if(install_modules)
     install(TARGETS sqlite LIBRARY DESTINATION "${LIB_INSTALL_DIR}/modules") 
