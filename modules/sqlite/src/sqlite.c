@@ -89,7 +89,7 @@ static int callback(void *NotUsed, int argc, char **argv, char **azColName)
     int i;
     for (i = 0; i<argc; i++) {
         LogInfo("%s = %s", azColName[i], argv[i] ? argv[i] : "NULL");
-        SNPRINTF_S(resultKey, BUFSIZE - 1, "result[%d].%s", result_idx, azColName[i]);
+        SNPRINTF_S(resultKey, BUFSIZE, "result[%d].%s", result_idx, azColName[i]);
         json_object_dotset_string(result_root_object, resultKey, argv[i] ? argv[i] : "NULL");
     }
     LogInfo("\n"); 
@@ -361,14 +361,14 @@ static void sqlite_try_update_trigger(SQLITE_HANDLE_DATA * handleData, SQLITE_SO
         if (column->primaryKey == 1)
         {
             index = strlen(sql_primary);
-            SNPRINTF_S(sql_primary + index, BUFSIZE - index - 1, "%s,", column->name);
+            SNPRINTF_S(sql_primary + index, BUFSIZE - index, "%s,", column->name);
         }
         column = column->p_next;
     }
     sql_primary[strlen(sql_primary)-1] = '\0'; // remove last comma
 
-	SNPRINTF_S(sql_drop_trigger, BUFSIZE - 1, "DROP TRIGGER %s_size_control;", src_table->table);
-	SNPRINTF_S(sql_trigger, BUFSIZE - 1, "CREATE TRIGGER %s_size_control INSERT ON %s WHEN (SELECT count(*) from %s)>%d\n"
+	SNPRINTF_S(sql_drop_trigger, BUFSIZE, "DROP TRIGGER %s_size_control;", src_table->table);
+	SNPRINTF_S(sql_trigger, BUFSIZE, "CREATE TRIGGER %s_size_control INSERT ON %s WHEN (SELECT count(*) from %s)>%d\n"
 		"BEGIN\n"
 		"DELETE FROM %s WHERE rowid <= (SELECT max(rowid) - %d FROM %s);\n"
 		"END;",
@@ -386,20 +386,20 @@ static void sqlite_try_create_table(SQLITE_HANDLE_DATA * handleData, SQLITE_SOUR
     int index = 0;
     SQLITE_COLUMN *column = src_table->columns;
 
-    SNPRINTF_S(sql_create + index, BUFSIZE - index - 1, "create table if not exists %s (", src_table->table);
-    SNPRINTF_S(sql_primary + index, BUFSIZE - index - 1, "PRIMARY KEY (");
+    SNPRINTF_S(sql_create + index, BUFSIZE - index, "create table if not exists %s (", src_table->table);
+    SNPRINTF_S(sql_primary + index, BUFSIZE - index, "PRIMARY KEY (");
     while (column)
     {
         //construct primary key
         if (column->primaryKey == 1)
         {
             index = strlen(sql_primary);
-            SNPRINTF_S(sql_primary + index, BUFSIZE - index - 1, "%s,", column->name);
+            SNPRINTF_S(sql_primary + index, BUFSIZE - index, "%s,", column->name);
         }
 
         //construct create table
         index = strlen(sql_create);
-        SNPRINTF_S(sql_create + index, BUFSIZE - index - 1, "%s %s %s,",
+        SNPRINTF_S(sql_create + index, BUFSIZE - index, "%s %s %s,",
             column->name,
             column->type,
             (column->notNull == 1) ? "NOT NULL" : ""
@@ -407,10 +407,10 @@ static void sqlite_try_create_table(SQLITE_HANDLE_DATA * handleData, SQLITE_SOUR
         column = column->p_next;
     }
     index = strlen(sql_primary);
-    SNPRINTF_S(sql_primary + index - 1, BUFSIZE - index - 1, ")");
+    SNPRINTF_S(sql_primary + index - 1, BUFSIZE - index + 1, ")");
 
     index = strlen(sql_create);
-    SNPRINTF_S(sql_create + index, BUFSIZE - index - 1, "%s);", sql_primary);
+    SNPRINTF_S(sql_create + index, BUFSIZE - index, "%s);", sql_primary);
 
     sqlite_exec(handleData, sql_create, 0);
 }
