@@ -13,11 +13,11 @@ namespace SQLite
     using Microsoft.Azure.Devices.Client.Transport.Mqtt;
     using Microsoft.Azure.Devices.Shared;
     using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
     using Microsoft.Data.Sqlite;
 
     class Program
     {
-        const string SQLiteConfigs = "SQLiteConfigs";
         const int DefaultPushInterval = 5000;
         static int m_counter = 0;
 
@@ -119,11 +119,12 @@ namespace SQLite
                 // Get message body, containing the write target and value
                 var messageBody = JsonConvert.DeserializeObject<SQLiteInMessage>(messageString);
 
-                if (messageBody != null)
+                if (messageBody != null && moduleHandle.connections.ContainsKey(messageBody.DbName))
                 {
-                    using (var transaction = moduleHandle.connection.BeginTransaction())
+                    var connection = moduleHandle.connections[messageBody.DbName];
+                    using (var transaction = connection.BeginTransaction())
                     {
-                        var selectCommand = moduleHandle.connection.CreateCommand();
+                        var selectCommand = connection.CreateCommand();
                         selectCommand.Transaction = transaction;
                         //selectCommand.CommandText = "SELECT * FROM test;";
                         selectCommand.CommandText = messageBody.Command;
@@ -133,6 +134,7 @@ namespace SQLite
                             {
                                 SQLiteOutMessage out_message = new SQLiteOutMessage();
                                 out_message.PublishTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                                out_message.RequestId = messageBody.RequestId;
 
                                 while (reader.Read())
                                 {
@@ -221,7 +223,7 @@ namespace SQLite
             Console.WriteLine("Desired property change:");
             Console.WriteLine(serializedStr);
 
-            if (desiredProperties.Contains(SQLiteConfigs))
+            if (desiredProperties.Contains(ModuleConfig.ConfigKeyName))
             {
                 // get config from Twin
                 jsonStr = serializedStr;
@@ -250,7 +252,8 @@ namespace SQLite
             if (!string.IsNullOrEmpty(jsonStr))
             {
                 Console.WriteLine("Attempt to load configuration: " + jsonStr);
-                config = JsonConvert.DeserializeObject<ModuleConfig>(jsonStr);
+                
+                config = ModuleConfig.CreateConfigFromJSONString(jsonStr);
 
                 if (config.IsValidate())
                 {
@@ -273,80 +276,61 @@ namespace SQLite
     }
     class ModuleHandle
     {
-        public SqliteConnection connection;
+        private static void TryCreateTable(SqliteConnection connection, Table tbl)
+        {
+            string columns = "";
+            string primaryKey = "PRIMARY KEY(";
+            foreach(var column in tbl.Columns)
+            {
+                columns+=$"{column.Value.ColumnName} {column.Value.Type} {(column.Value.NotNull?"NOT NULL":"")},";
+                if(column.Value.IsKey)
+                    primaryKey+=$"{column.Value.ColumnName},";
+            }
+            columns.Remove(columns.Length - 1);
+            primaryKey = primaryKey.Remove(primaryKey.Length - 1) + ')';
+            
+            using(var command = connection.CreateCommand())  
+            {
+                command.CommandText = $@"  
+                CREATE TABLE IF NOT EXISTS {tbl.TableName}  
+                (  
+                    {columns} {primaryKey}
+                );
+                ";  
+        
+                // Create table if not exist  
+                command.ExecuteNonQuery();  
+            }
+        }
+        public Dictionary<string, SqliteConnection> connections = new Dictionary<string, SqliteConnection>();
         public static ModuleHandle CreateHandleFromConfiguration(ModuleConfig config)
         {
             ModuleHandle handle = new ModuleHandle();
-            handle.connection = new SqliteConnection("" +
-            new SqliteConnectionStringBuilder
+
+            foreach(var database in config.DataBases)
             {
-                DataSource = config.DbPath
-            });
-            try
-            {
-                handle.connection.Open();
+                var connection = new SqliteConnection("" +
+                new SqliteConnectionStringBuilder
+                {
+                    DataSource = database.Value.DbPath
+                });
+                try
+                {
+                    connection.Open();
 
-                using(var command = handle.connection.CreateCommand())  
-                {  
-                    string columns = "";
-                    string primaryKey = "PRIMARY KEY(";
-                    foreach(var column in config.Columns)
+                    foreach(var tbl in database.Value.Tables)
                     {
-                        columns+=$"{column.Value.Name} {column.Value.Type} {(column.Value.NotNull?"NOT NULL":"")},";
-                        if(column.Value.IsKey)
-                            primaryKey+=$"{column.Value.Name},";
+                        TryCreateTable(connection, tbl.Value);
                     }
-                    columns.Remove(columns.Length - 1);
-                    primaryKey = primaryKey.Remove(primaryKey.Length - 1) + ')';
-                    
-                    command.CommandText = $@"  
-                    CREATE TABLE IF NOT EXISTS {config.TableName}  
-                    (  
-                        {columns} {primaryKey}
-                    );
-                    ";  
-            
-                    // Create table if not exist  
-                    command.ExecuteNonQuery();  
-
-                    //test
-                    /*
-                    using (var transaction = handle.connection.BeginTransaction())
-                    {
-                        var insertCommand = handle.connection.CreateCommand();
-                        insertCommand.Transaction = transaction;
-                        insertCommand.CommandText = "INSERT INTO test ( Id, Value ) VALUES ( 2,99 )";
-                        
-                        insertCommand.ExecuteNonQuery();
-                        
-
-                        var selectCommand = handle.connection.CreateCommand();
-                        selectCommand.Transaction = transaction;
-                        selectCommand.CommandText = "SELECT * FROM test";
-                        using (var reader = selectCommand.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                int count = reader.FieldCount;
-                                string message = "";
-                                for(int i = 0; i<count; i++)
-                                {
-                                    message += reader.GetString(i)+' ';
-                                }
-                                Console.WriteLine(message);
-                            }
-                        }
-                        transaction.Commit();
-                    }
-                    */
                 }
-            }
-            catch(Exception e)
-            {
-                Console.WriteLine($"Exception while opening database, err message: {e.Message}");
-                Console.WriteLine("Check if the database file is created or being mounted into the conainter correctly");
-            }
+                catch(Exception e)
+                {
+                    Console.WriteLine($"Exception while opening database, err message: {e.Message}");
+                    Console.WriteLine("Check if the database file is created or being mounted into the conainter correctly");
+                }
 
+                handle.connections.Add(database.Value.DbPath, connection);
+            }
             return handle;
         }
     }
@@ -354,54 +338,153 @@ namespace SQLite
     class SQLiteOutMessage
     {
         public string PublishTimestamp;
+        public int RequestId;
         public List<List<string>> Rows = new List<List<string>>();
     }
     class SQLiteInMessage
     {
+        public int RequestId;
+        public string DbName;
         public string Command;
     }
     class ModuleConfig
     {
-        public string DbPath;
-        public string TableName;
-        public Dictionary<string, Column> Columns;
-        public bool IsValidate()
+        private bool ValidateColumn(Column column)
         {
             bool ret = true;
-            if(DbPath == null)
-            {
-                Console.WriteLine("missing DbPath");
-                ret = false;
-            }
-            if(TableName == null)
-            {
-                Console.WriteLine("missing TableName");
-            }
             
-            if(Columns.Count == 0)
+            if(column.ColumnName == null)
             {
-                Console.WriteLine("missing Columns");
+                Console.WriteLine($"Column:{column} missing ColumnName");
+                ret &= false;
             }
-            else
+            if(column.Type == null)
             {
-                foreach(var column in Columns)
-                {
-                    if(column.Value.Name == null)
-                    {
-                        Console.WriteLine($"Column:{column.Key} missing Name");
-                    }
-                    if(column.Value.Type == null)
-                    {
-                        Console.WriteLine($"Column:{column.Key} missing Type");
-                    }
-                }
+                Console.WriteLine($"Column:{column} missing Type");
+                ret &= false;
             }
             return ret;
         }
+        private bool ValidateTable(Table tbl)
+        {
+            bool ret = true;
+            if(tbl.TableName == null)
+            {
+                Console.WriteLine("missing TableName");
+                ret &= false;
+            }
+            if(tbl.Columns.Count == 0)
+            {
+                Console.WriteLine("missing Columns");
+                ret &= false;
+            }
+            else
+            {
+                foreach (var column in tbl.Columns)
+                {
+                    ret &= ValidateColumn(column.Value);
+                }
+            }
+
+            return ret;
+        }
+        private bool ValidateDataBase(DataBase db)
+        {
+            bool ret = true;
+            if(db.DbPath == null)
+            {
+                Console.WriteLine("missing DbPath");
+                ret &= false;
+            }
+            foreach (var tbl in db.Tables)
+            {
+                ret &= ValidateTable(tbl.Value);
+            }
+
+            return ret;
+        }
+        public Dictionary<string, DataBase> DataBases;
+
+        public bool IsValidate()
+        {
+            bool ret = true;
+            foreach(var db in DataBases)
+            {
+                ret &= ValidateDataBase(db.Value);
+            }
+            return ret;
+        }
+        public const string ConfigKeyName = "SQLiteConfigs";
+        public static ModuleConfig CreateConfigFromJSONString(string jsonStr)
+        {
+            ModuleConfig config = new ModuleConfig();
+            Dictionary<string, DataBase> databases = new Dictionary<string, DataBase>();
+            config.DataBases = databases;
+
+            //JObject configObject = JObject.Parse(jsonStr).GetValue("SQLiteConfigs");
+            //JToken configToken = configObject.First;
+            JToken configToken = JObject.Parse(jsonStr).GetValue(ConfigKeyName).First;
+
+            while (configToken != null)
+            {
+                JProperty configProperty = (JProperty)configToken;
+                if (configProperty.Name.ToString() != "$version")
+                {
+                    DataBase database = new DataBase();
+                    Dictionary<string, Table> tables = new Dictionary<string, Table>();
+                    database.Tables = tables;
+                    JToken dbToken = configToken.First.First;
+                    while (dbToken != null)
+                    {
+                        JProperty dbProperty = (JProperty)dbToken;
+                        if (dbProperty.Name.ToString() == "DbPath")
+                        {
+                            database.DbPath = dbProperty.Value.ToString();
+                        }
+                        else
+                        {
+                            Table table = new Table();
+                            Dictionary<string, Column> columns = new Dictionary<string, Column>();
+                            table.Columns = columns;
+                            JToken tableToken = dbToken.First.First;
+                            while (tableToken != null)
+                            {
+                                JProperty tableProperty = (JProperty)tableToken;
+                                if (tableProperty.Name.ToString() == "TableName")
+                                {
+                                    table.TableName = tableProperty.Value.ToString();
+                                }
+                                else
+                                {
+                                    Column column = JsonConvert.DeserializeObject<Column>(tableProperty.Value.ToString());
+                                    columns.Add(tableProperty.Name.ToString(), column);
+                                }
+                                tableToken = tableToken.Next;
+                            }
+                            tables.Add(dbProperty.Name.ToString(), table);
+                        }
+                        dbToken = dbToken.Next;
+                    }
+                    databases.Add(configProperty.Name.ToString(), database);
+                }
+                configToken = configToken.Next;
+            }
+            return config;
+        }
+    }
+    class DataBase
+    {
+        public string DbPath;
+        public Dictionary<string, Table> Tables;
+    }
+    class Table
+    {        
+        public string TableName;
+        public Dictionary<string, Column> Columns;
     }
     class Column
     {
-        public string Name;
+        public string ColumnName;
         public string Type;
         public bool IsKey;
         public bool NotNull;
