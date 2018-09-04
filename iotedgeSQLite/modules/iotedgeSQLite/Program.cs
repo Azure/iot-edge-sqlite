@@ -135,6 +135,7 @@ namespace SQLite
                                 SQLiteOutMessage out_message = new SQLiteOutMessage();
                                 out_message.PublishTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                                 out_message.RequestId = messageBody.RequestId;
+                                out_message.RequestModule = messageBody.RequestModule;
 
                                 while (reader.Read())
                                 {
@@ -339,11 +340,13 @@ namespace SQLite
     {
         public string PublishTimestamp;
         public int RequestId;
+        public string RequestModule;
         public List<List<string>> Rows = new List<List<string>>();
     }
     class SQLiteInMessage
     {
         public int RequestId;
+        public string RequestModule;
         public string DbName;
         public string Command;
     }
