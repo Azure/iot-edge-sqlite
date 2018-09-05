@@ -424,8 +424,6 @@ namespace SQLite
             Dictionary<string, DataBase> databases = new Dictionary<string, DataBase>();
             config.DataBases = databases;
 
-            //JObject configObject = JObject.Parse(jsonStr).GetValue("SQLiteConfigs");
-            //JToken configToken = configObject.First;
             JToken configToken = JObject.Parse(jsonStr).GetValue(ConfigKeyName).First;
 
             while (configToken != null)
