@@ -1,0 +1,127 @@
+{
+  "moduleContent": {
+    "$edgeAgent": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "runtime": {
+          "type": "docker",
+          "settings": {
+            "minDockerVersion": "v1.25",
+            "loggingOptions": "",
+            "registryCredentials": {}
+          }
+        },
+        "systemModules": {
+          "edgeAgent": {
+            "type": "docker",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.0",
+              "createOptions": ""
+            }
+          },
+          "edgeHub": {
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
+              "createOptions": "{\"HostConfig\":{\"PortBindings\":{\"8883/tcp\":[{\"HostPort\":\"8883\"}],\"443/tcp\":[{\"HostPort\":\"443\"}]}}}"
+            }
+          }
+        },
+        "modules": {
+          "sqlite": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.iotedgeSQLite.amd64}",
+              "createOptions": "{\"HostConfig\":{\"Binds\":[\"<Path To Host Database Directory>:<Path To Container Database Directory>\"]}}"
+            }
+          },
+          "modbus": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge/modbus:1.0",
+              "createOptions": ""
+            }
+          }
+        }
+      }
+    },
+    "$edgeHub": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "routes": {
+          "iotedgeSQLiteToIoTHub": "FROM /messages/modules/sqlite/outputs/sqliteOutput INTO $upstream",
+          "modbusToiotedgeSQLite": "FROM /messages/modules/modbus/outputs/modbusOutput INTO BrokeredEndpoint(\"/modules/sqlite/inputs/input1\")"
+        },
+        "storeAndForwardConfiguration": {
+          "timeToLiveSecs": 7200
+        }
+      }
+    },
+    "sqlite": {  
+      "properties.desired":{
+        "SQLiteConfigs":{
+          "Db01":{
+            "DbPath": "<Path To Host Database File>",
+            "Table01":{
+              "TableName": "test",
+              "Column01":{
+                "ColumnName": "Id",
+                "Type": "numeric",
+                "IsKey": "true",
+                "NotNull": "true"
+              },
+              "Column02":{
+                "ColumnName": "Value",
+                "Type": "numeric",
+                "IsKey": "false",
+                "NotNull": "true"
+              }
+            }
+          }
+        }
+      }
+    },
+    "modbus": {  
+      "properties.desired":{
+        "PublishInterval": "5000",
+        "SlaveConfigs": {
+          "Slave01": {
+            "SlaveConnection": "<IPV4 of Modbus Slave>",
+            "TcpPort": "502",
+            "RetryCount": "10",
+            "RetryInterval": "100",
+            "HwId": "PowerMeter-0a:01:01:01:01:01",
+            "Operations": {
+              "Op01": {
+                "PollingInterval": "2000",
+                "UnitId": "1",
+                "StartAddress": "400001",
+                "Count": "2",
+                "CorrelationId": "MessageType1",
+                "DisplayName": "Voltage"
+              },
+              "Op02": {
+                "PollingInterval": "2000",
+                "UnitId": "1",
+                "StartAddress": "400002",
+                "Count": "2",
+                "CorrelationId": "MessageType2",
+                "DisplayName": "Current"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+

@@ -1,4 +1,4 @@
-Microsoft Azure IoT Gateway Modbus
+Microsoft Azure IoT Edge SQLite
 Copyright (c) Microsoft Corporation
 
 MIT license

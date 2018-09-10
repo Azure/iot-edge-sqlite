@@ -1,0 +1,22 @@
+﻿{
+  "SQLiteConfigs":{
+    "Db01":{
+      "DbPath": "/app/db/test.db",
+      "Table01":{
+        "TableName": "test",
+        "Column01":{
+          "ColumnName": "Id",
+          "Type": "numeric",
+          "IsKey": "true",
+          "NotNull": "true"
+        },
+        "Column02":{
+          "ColumnName": "Value",
+          "Type": "numeric",
+          "IsKey": "false",
+          "NotNull": "true"
+        }
+      }
+    }
+  }
+}
