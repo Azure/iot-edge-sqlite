@@ -52,7 +52,7 @@ Then you can see the deployment is successfully created with a deployment ID in 
 You can check your container status in the VS Code Docker explorer or by run the docker ps command in the terminal.
 
 ## Configuration ##
-Before running the module, proper configuration is required. Here is a sample configuration for your reference.
+Before running the module, proper configuration is required. Here is a sample of the desired properties for your reference.
 ```json
 {
   "SQLiteConfigs":{
