@@ -3,9 +3,7 @@ namespace SQLite
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Runtime.InteropServices;
     using System.Runtime.Loader;
-    using System.Security.Cryptography.X509Certificates;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -16,15 +14,15 @@ namespace SQLite
     using Newtonsoft.Json.Linq;
     using Microsoft.Data.Sqlite;
 
-    class Program
+    internal class Program
     {
-        const int DefaultPushInterval = 5000;
-        static int m_counter = 0;
+        private const int DefaultPushInterval = 5000;
+        private static int m_counter = 0;
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             // Initialize Edge Module
-            InitEdgeModule().Wait();
+            Init().Wait();
 
             // Wait until the app unloads or is cancelled
             var cts = new CancellationTokenSource();
@@ -46,28 +44,15 @@ namespace SQLite
         /// <summary>
         /// Initializes the Azure IoT Client for the Edge Module
         /// </summary>
-        static async Task InitEdgeModule()
+        private static async Task Init()
         {
             try
             {
-                // Open a connection to the Edge runtime using MQTT transport and
-                // the connection string provided as an environment variable
-                string connectionString = Environment.GetEnvironmentVariable("EdgeHubConnectionString");
-               
-                AmqpTransportSettings amqpSettings = new AmqpTransportSettings(TransportType.Amqp_Tcp_Only);
-                // Suppress cert validation on Windows for now
-                /*
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    amqpSettings.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
-                }
-                */
-
-
-              
-                ITransportSettings[] settings = { amqpSettings };
+                MqttTransportSettings mqttSetting = new MqttTransportSettings(TransportType.Mqtt_Tcp_Only);
+                ITransportSettings[] settings = { mqttSetting };
 
                 ModuleClient ioTHubModuleClient = await ModuleClient.CreateFromEnvironmentAsync(settings);
+
                 await ioTHubModuleClient.OpenAsync();
                 Console.WriteLine("IoT Hub module client initialized.");
 
@@ -77,7 +62,6 @@ namespace SQLite
 
                 // Attach callback for Twin desired properties updates
                 await ioTHubModuleClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertiesUpdate, ioTHubModuleClient);
-
             }
             catch (AggregateException ex)
             {
@@ -87,15 +71,14 @@ namespace SQLite
                     Console.WriteLine("Error when initializing module: {0}", exception);
                 }
             }
-
         }
 
         /// <summary>
-        /// This method is called whenever the module is sent a message from the EdgeHub. 
+        /// This method is called whenever the module is sent a message from the EdgeHub.
         /// It just pipe the messages without any change.
         /// It prints all the incoming messages.
         /// </summary>
-        static async Task<MessageResponse> PipeMessage(Message message, object userContext)
+        private static async Task<MessageResponse> PipeMessage(Message message, object userContext)
         {
             Console.WriteLine("SQLite - Received command");
             int counterValue = Interlocked.Increment(ref m_counter);
@@ -130,7 +113,7 @@ namespace SQLite
                         selectCommand.CommandText = messageBody.Command;
                         using (var reader = selectCommand.ExecuteReader())
                         {
-                            if(reader.HasRows)
+                            if (reader.HasRows)
                             {
                                 SQLiteOutMessage out_message = new SQLiteOutMessage();
                                 out_message.PublishTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
@@ -141,7 +124,7 @@ namespace SQLite
                                 {
                                     List<string> row = new List<string>();
                                     int count = reader.FieldCount;
-                                    for(int i = 0; i<count; i++)
+                                    for (int i = 0; i < count; i++)
                                     {
                                         var value = reader.GetString(i);
                                         row.Add(value);
@@ -169,7 +152,7 @@ namespace SQLite
         /// <summary>
         /// Callback to handle Twin desired properties updates�
         /// </summary>
-        static async Task OnDesiredPropertiesUpdate(TwinCollection desiredProperties, object userContext)
+        private static async Task OnDesiredPropertiesUpdate(TwinCollection desiredProperties, object userContext)
         {
             ModuleClient ioTHubModuleClient = userContext as ModuleClient;
 
@@ -204,16 +187,16 @@ namespace SQLite
         /// <param name="message"></param>
         /// <param name="userContext"></param>
         /// <returns></returns>
-        static async Task<MessageResponse> DummyCallBack(Message message, object userContext)
+        private static async Task<MessageResponse> DummyCallBack(Message message, object userContext)
         {
             await Task.Delay(TimeSpan.FromSeconds(0));
             return MessageResponse.Abandoned;
         }
 
         /// <summary>
-        /// Update Start from module Twin. 
+        /// Update Start from module Twin.
         /// </summary>
-        static async Task UpdateStartFromTwin(TwinCollection desiredProperties, ModuleClient ioTHubModuleClient)
+        private static async Task UpdateStartFromTwin(TwinCollection desiredProperties, ModuleClient ioTHubModuleClient)
         {
             ModuleConfig config;
             ModuleHandle moduleHandle;
@@ -253,7 +236,7 @@ namespace SQLite
             if (!string.IsNullOrEmpty(jsonStr))
             {
                 Console.WriteLine("Attempt to load configuration: " + jsonStr);
-                
+
                 config = ModuleConfig.CreateConfigFromJSONString(jsonStr);
 
                 if (config.IsValidate())
@@ -272,43 +255,44 @@ namespace SQLite
                 }
             }
         }
-
-        
     }
-    class ModuleHandle
+
+    internal class ModuleHandle
     {
         private static void TryCreateTable(SqliteConnection connection, Table tbl)
         {
             string columns = "";
             string primaryKey = "PRIMARY KEY(";
-            foreach(var column in tbl.Columns)
+            foreach (var column in tbl.Columns)
             {
-                columns+=$"{column.Value.ColumnName} {column.Value.Type} {(column.Value.NotNull?"NOT NULL":"")},";
-                if(column.Value.IsKey)
-                    primaryKey+=$"{column.Value.ColumnName},";
+                columns += $"{column.Value.ColumnName} {column.Value.Type} {(column.Value.NotNull ? "NOT NULL" : "")},";
+                if (column.Value.IsKey)
+                    primaryKey += $"{column.Value.ColumnName},";
             }
             columns.Remove(columns.Length - 1);
             primaryKey = primaryKey.Remove(primaryKey.Length - 1) + ')';
-            
-            using(var command = connection.CreateCommand())  
+
+            using (var command = connection.CreateCommand())
             {
-                command.CommandText = $@"  
-                CREATE TABLE IF NOT EXISTS {tbl.TableName}  
-                (  
+                command.CommandText = $@"
+                CREATE TABLE IF NOT EXISTS {tbl.TableName}
+                (
                     {columns} {primaryKey}
                 );
-                ";  
-        
-                // Create table if not exist  
-                command.ExecuteNonQuery();  
+                ";
+
+                // Create table if not exist
+                command.ExecuteNonQuery();
             }
         }
+
         public Dictionary<string, SqliteConnection> connections = new Dictionary<string, SqliteConnection>();
+
         public static ModuleHandle CreateHandleFromConfiguration(ModuleConfig config)
         {
             ModuleHandle handle = new ModuleHandle();
 
-            foreach(var database in config.DataBases)
+            foreach (var database in config.DataBases)
             {
                 var connection = new SqliteConnection("" +
                 new SqliteConnectionStringBuilder
@@ -319,12 +303,12 @@ namespace SQLite
                 {
                     connection.Open();
 
-                    foreach(var tbl in database.Value.Tables)
+                    foreach (var tbl in database.Value.Tables)
                     {
                         TryCreateTable(connection, tbl.Value);
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     Console.WriteLine($"Exception while opening database, err message: {e.Message}");
                     Console.WriteLine("Check if the database file is created or being mounted into the container correctly");
@@ -335,48 +319,57 @@ namespace SQLite
             return handle;
         }
     }
-    
-    class SQLiteOutMessage
+
+    internal class SQLiteOutMessage
     {
-        public string PublishTimestamp;
-        public int RequestId;
-        public string RequestModule;
-        public List<List<string>> Rows = new List<List<string>>();
+        public SQLiteOutMessage()
+        {
+            Rows = new List<List<string>>();
+        }
+
+        public string PublishTimestamp { get; set; }
+        public int RequestId { get; set; }
+        public string RequestModule { get; set; }
+
+        public List<List<string>> Rows { get; private set; }
     }
-    class SQLiteInMessage
+
+    internal class SQLiteInMessage
     {
-        public int RequestId;
-        public string RequestModule;
-        public string DbName;
-        public string Command;
+        public int RequestId { get; set; }
+        public string RequestModule { get; set; }
+        public string DbName { get; set; }
+        public string Command { get; set; }
     }
-    class ModuleConfig
+
+    internal class ModuleConfig
     {
         private bool ValidateColumn(Column column)
         {
             bool ret = true;
-            
-            if(column.ColumnName == null)
+
+            if (column.ColumnName == null)
             {
                 Console.WriteLine($"Column:{column} missing ColumnName");
                 ret &= false;
             }
-            if(column.Type == null)
+            if (column.Type == null)
             {
                 Console.WriteLine($"Column:{column} missing Type");
                 ret &= false;
             }
             return ret;
         }
+
         private bool ValidateTable(Table tbl)
         {
             bool ret = true;
-            if(tbl.TableName == null)
+            if (tbl.TableName == null)
             {
                 Console.WriteLine("missing TableName");
                 ret &= false;
             }
-            if(tbl.Columns.Count == 0)
+            if (tbl.Columns.Count == 0)
             {
                 Console.WriteLine("missing Columns");
                 ret &= false;
@@ -391,10 +384,11 @@ namespace SQLite
 
             return ret;
         }
+
         private bool ValidateDataBase(DataBase db)
         {
             bool ret = true;
-            if(db.DbPath == null)
+            if (db.DbPath == null)
             {
                 Console.WriteLine("missing DbPath");
                 ret &= false;
@@ -406,18 +400,21 @@ namespace SQLite
 
             return ret;
         }
+
         public Dictionary<string, DataBase> DataBases;
 
         public bool IsValidate()
         {
             bool ret = true;
-            foreach(var db in DataBases)
+            foreach (var db in DataBases)
             {
                 ret &= ValidateDataBase(db.Value);
             }
             return ret;
         }
+
         public const string ConfigKeyName = "SQLiteConfigs";
+
         public static ModuleConfig CreateConfigFromJSONString(string jsonStr)
         {
             ModuleConfig config = new ModuleConfig();
@@ -473,21 +470,24 @@ namespace SQLite
             return config;
         }
     }
-    class DataBase
+
+    internal class DataBase
     {
         public string DbPath;
         public Dictionary<string, Table> Tables;
     }
-    class Table
-    {        
-        public string TableName;
-        public Dictionary<string, Column> Columns;
-    }
-    class Column
+
+    internal class Table
     {
-        public string ColumnName;
-        public string Type;
-        public bool IsKey;
-        public bool NotNull;
+        public string TableName { get; set; }
+        public Dictionary<string, Column> Columns { get; set; }
+    }
+
+    internal class Column
+    {
+        public string ColumnName { get; set; }
+        public string Type { get; set; }
+        public bool IsKey { get; set; }
+        public bool NotNull { get; set; }
     }
 }
