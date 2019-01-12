@@ -327,7 +327,7 @@ namespace SQLite
                 catch(Exception e)
                 {
                     Console.WriteLine($"Exception while opening database, err message: {e.Message}");
-                    Console.WriteLine("Check if the database file is created or being mounted into the conainter correctly");
+                    Console.WriteLine("Check if the database file is created or being mounted into the container correctly");
                 }
 
                 handle.connections.Add(database.Value.DbPath, connection);
