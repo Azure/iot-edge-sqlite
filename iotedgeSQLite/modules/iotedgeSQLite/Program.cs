@@ -16,7 +16,6 @@ namespace SQLite
 
     internal class Program
     {
-        private const int DefaultPushInterval = 5000;
         private static int m_counter = 0;
 
         private static void Main(string[] args)
@@ -53,15 +52,16 @@ namespace SQLite
 
                 ModuleClient ioTHubModuleClient = await ModuleClient.CreateFromEnvironmentAsync(settings);
 
-                await ioTHubModuleClient.OpenAsync();
-                Console.WriteLine("IoT Hub module client initialized.");
-
                 // Read config from Twin and Start
                 Twin moduleTwin = await ioTHubModuleClient.GetTwinAsync();
+
                 await UpdateStartFromTwin(moduleTwin.Properties.Desired, ioTHubModuleClient);
 
                 // Attach callback for Twin desired properties updates
                 await ioTHubModuleClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertiesUpdate, ioTHubModuleClient);
+
+                await ioTHubModuleClient.OpenAsync();
+                Console.WriteLine("IoT Hub module client initialized.");
             }
             catch (AggregateException ex)
             {
@@ -89,6 +89,7 @@ namespace SQLite
                 throw new InvalidOperationException("UserContext doesn't contain " +
                     "expected values");
             }
+            
             ModuleClient ioTHubModuleClient = userContextValues.Item1;
             ModuleHandle moduleHandle = userContextValues.Item2;
 
