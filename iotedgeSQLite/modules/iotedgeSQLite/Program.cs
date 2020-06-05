@@ -150,7 +150,7 @@ namespace SQLite
                                 }
 
                                 //todo send back to sender module
-                                message = new Message(Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(out_message)));
+                                message = new Message(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(out_message)));
                                 message.Properties.Add("content-type", "application/edge-sqlite-json");
 
                                 if (message != null)
