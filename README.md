@@ -53,11 +53,25 @@ You can check your container status in the VS Code Docker explorer or by run the
 
 ## Configuration ##
 Before running the module, proper configuration is required. Here is a sample configuration for your reference.
+
+### Container Create Option ##
+To persist the database file, you will need to bind a host folder to container folder. 
+If you are using "Docker for Windows" to run linux container, you will need to propertly configure docker file sharing to enable volume binding.
+```json
+{
+  "HostConfig": {
+    "Binds": [
+      "<Host Path>:/app/db"
+    ]
+  }
+}
+```
+### Database Configuration in Module Twin Settings
 ```json
 {
   "SQLiteConfigs":{
     "Db01":{
-      "DbPath": "/app/db-test.db",
+      "DbPath": "/app/db/test.db",
       "Table01":{
         "TableName": "test",
         "Column01":{
@@ -90,6 +104,15 @@ Meaning of each field:
             * "IsKey" - Is key property of the column
             * "NotNull" - Is notnull property of the column
 
+[NOTE] Please notice that /app/db folder in the sample configuration is created only via binding with permissions allowing module user (non-root) to write.
+If you don't want to persist the database file on host (not applying above container create option), you will need to specify an existing folder with module user read/write permission, for example "/tmp" .
+You cannot specify a non-existing folder to store the database file (/app/db folder does not exist unless via folder binding). If you see following error in container log :
+```
+Exception while opening database, err message: SQLite Error 14: 'unable to open database file'.
+Check if the database file is created or being mounted into the conainter correctly
+```
+Then it's probably because you store the database file at an non-existing folder, or the folder you specify has not write permission to module user.
+
 ## Module Endpoints and Routing ##
 There are two endpoints defined in SQLite module:  
 - "sqliteOutput": This is an output endpoint for the result of sql queries.
@@ -114,7 +137,7 @@ Message Payload:
 {
     "RequestId":"0",
     "RequestModule":"filter",
-    "DbName":"/app/db-test.db",
+    "DbName":"/app/db/test.db",
     "Command":"select Id, Value from test;"
 }
 ```
