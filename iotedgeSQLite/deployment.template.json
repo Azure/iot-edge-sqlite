@@ -1,5 +1,5 @@
 {
-  "moduleContent": {
+  "modulesContent": {
     "$edgeAgent": {
       "properties.desired": {
         "schemaVersion": "1.0",
@@ -25,7 +25,7 @@
             "restartPolicy": "always",
             "settings": {
               "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
-              "createOptions": "{\"HostConfig\":{\"PortBindings\":{\"8883/tcp\":[{\"HostPort\":\"8883\"}],\"443/tcp\":[{\"HostPort\":\"443\"}]}}}"
+              "createOptions": "{\"HostConfig\":{\"PortBindings\":{\"443/tcp\":[{\"HostPort\":\"443\"}],\"5671/tcp\":[{\"HostPort\":\"5671\"}],\"8883/tcp\":[{\"HostPort\":\"8883\"}]}}}"
             }
           }
         },
@@ -39,16 +39,6 @@
               "image": "${MODULES.iotedgeSQLite.amd64}",
               "createOptions": "{\"HostConfig\":{\"Binds\":[\"<Path To Host Database Directory>:<Path To Container Database Directory>\"]}}"
             }
-          },
-          "modbus": {
-            "version": "1.0",
-            "type": "docker",
-            "status": "running",
-            "restartPolicy": "always",
-            "settings": {
-              "image": "mcr.microsoft.com/azureiotedge/modbus:1.0",
-              "createOptions": ""
-            }
           }
         }
       }
@@ -57,8 +47,7 @@
       "properties.desired": {
         "schemaVersion": "1.0",
         "routes": {
-          "iotedgeSQLiteToIoTHub": "FROM /messages/modules/sqlite/outputs/sqliteOutput INTO $upstream",
-          "modbusToiotedgeSQLite": "FROM /messages/modules/modbus/outputs/modbusOutput INTO BrokeredEndpoint(\"/modules/sqlite/inputs/input1\")"
+          "iotedgeSQLiteToIoTHub": "FROM /messages/modules/sqlite/outputs/sqliteOutput INTO $upstream"
         },
         "storeAndForwardConfiguration": {
           "timeToLiveSecs": 7200
@@ -83,38 +72,6 @@
                 "Type": "numeric",
                 "IsKey": "false",
                 "NotNull": "true"
-              }
-            }
-          }
-        }
-      }
-    },
-    "modbus": {  
-      "properties.desired":{
-        "PublishInterval": "5000",
-        "SlaveConfigs": {
-          "Slave01": {
-            "SlaveConnection": "<IPV4 of Modbus Slave>",
-            "TcpPort": "502",
-            "RetryCount": "10",
-            "RetryInterval": "100",
-            "HwId": "PowerMeter-0a:01:01:01:01:01",
-            "Operations": {
-              "Op01": {
-                "PollingInterval": "2000",
-                "UnitId": "1",
-                "StartAddress": "400001",
-                "Count": "2",
-                "CorrelationId": "MessageType1",
-                "DisplayName": "Voltage"
-              },
-              "Op02": {
-                "PollingInterval": "2000",
-                "UnitId": "1",
-                "StartAddress": "400002",
-                "Count": "2",
-                "CorrelationId": "MessageType2",
-                "DisplayName": "Current"
               }
             }
           }

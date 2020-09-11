@@ -1,7 +1,7 @@
 ﻿{
   "SQLiteConfigs":{
     "Db01":{
-      "DbPath": "/app/db/test.db",
+      "DbPath": "/app/db-test.db",
       "Table01":{
         "TableName": "test",
         "Column01":{

@@ -11,7 +11,7 @@ Visit http://azure.com/iotdev to learn more about developing applications for Az
 
 ## Azure IoT Edge Compatibility ##
 Current version of the module is targeted for the [Azure IoT Edge GA](https://azure.microsoft.com/en-us/blog/azure-iot-edge-generally-available-for-enterprise-grade-scaled-deployments/).  
-If you are using [v1 version of IoT Edge](https://github.com/Azure/iot-edge/tree/master/v1) (previously known as Azure IoT Gateway), please use v1 version of this module, all materials can be found in [v1](https://github.com/Azure/iot-edge-sqlite/tree/master/v1) folder.
+If you are using the obsolete [v1 version of IoT Edge](https://github.com/Azure/iot-edge/tree/master/v1) (previously known as Azure IoT Gateway), please use v1 version of this module, all materials can be found in [v1](https://github.com/Azure/iot-edge-sqlite/tree/master/v1) folder.
 
 Find more information about Azure IoT Edge at [here](https://docs.microsoft.com/en-us/azure/iot-edge/how-iot-edge-works).
 
@@ -20,8 +20,8 @@ Find more information about Azure IoT Edge at [here](https://docs.microsoft.com/
 ### Platform Compatibility ###
 Azure IoT Edge is designed to be used with a broad range of operating system platforms. SQLite module has been tested on the following platforms:
 
-- Windows 10 Enterprise (version 1709) x64
-- Windows 10 IoT Core (version 1709) x64
+- Windows 10 Enterprise (version 1809) x64
+- Windows 10 IoT Core (version 1809) x64
 - Linux x64
 - Linux arm32v7
 
@@ -57,7 +57,7 @@ Before running the module, proper configuration is required. Here is a sample co
 {
   "SQLiteConfigs":{
     "Db01":{
-      "DbPath": "/app/db/test.db",
+      "DbPath": "/app/db-test.db",
       "Table01":{
         "TableName": "test",
         "Column01":{
@@ -114,7 +114,7 @@ Message Payload:
 {
     "RequestId":"0",
     "RequestModule":"filter",
-    "DbName":"/app/db/test.db",
+    "DbName":"/app/db-test.db",
     "Command":"select Id, Value from test;"
 }
 ```
